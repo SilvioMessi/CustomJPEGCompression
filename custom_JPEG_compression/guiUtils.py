@@ -14,6 +14,8 @@ class GUIManager:
         self.frame.pack(expand=1, fill=BOTH)
         self.qualityValue = IntVar()
         self.NValue = IntVar()
+        self.originalImageZoom = IntVar()
+        self.originalImageZoom.set(1)
 
     def mainView(self): 
         # original image frame
@@ -80,7 +82,7 @@ class GUIManager:
         if openMode is True:
             file = askopenfilename(**fileOptions)
             if file is not None:
-                self.image = ImageTk.PhotoImage(Image.open(file))
+                self.originalImage = Image.open(file)
                 if self.originalImageCanvas is None:
                     self.originalImageLabel.pack_forget()
                     self.compressedImageLabel.config(text=_("Please set N and Quality values and press ") + 
@@ -100,15 +102,16 @@ class GUIManager:
                     self.originalImageVBar.pack(side=RIGHT, fill=Y)
                     self.originalImageVBar.config(command=self.originalImageCanvas.yview)
                     self.originalImageCanvas.pack(expand=1, fill=BOTH)
+                    self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=1, to=10, orient=HORIZONTAL, command=self.updateOrginalImage)
+                    self.originalImageScale.pack()
+                    # self.draw() called by updateOrginalImage
                 else:
+                    self.originalImageZoom.set(1)
                     self.originalImageCanvas.delete("all")
-                self.originalImageCanvas.config(scrollregion=(0, 0, self.image.width(), self.image.height()),
-                                                yscrollcommand=self.originalImageVBar.set,
-                                                xscrollcommand=self.originalImageHBar.set) 
-                self.originalImageCanvas.create_image(0, 0, image=self.image, anchor="nw")
+                    self.draw()
 
     def compressImage(self):
-        self.imageCompresse = self.image
+        self.compressedImage = ImageTk.PhotoImage(self.originalImage)
         if self.compressedImageCanvas is None:
             self.compressedImageLabel.pack_forget()
             self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
@@ -121,7 +124,20 @@ class GUIManager:
             self.compressedImageCanvas.pack(expand=1, fill=BOTH)
         else:
             self.compressedImageCanvas.delete("all")
-        self.compressedImageCanvas.config(scrollregion=(0, 0, self.imageCompresse.width(), self.imageCompresse.height()),
+        self.compressedImageCanvas.config(scrollregion=(0, 0, self.compressedImage.width(), self.compressedImage.height()),
                                         yscrollcommand=self.compressedImageVBar.set,
                                         xscrollcommand=self.compressedImageHBar.set) 
-        self.compressedImageCanvas.create_image(0, 0, image=self.imageCompresse, anchor="nw")           
+        self.compressedImageCanvas.create_image(0, 0, image=self.compressedImage, anchor="nw")  
+ 
+    def draw(self):
+        iw, ih = self.originalImage.size
+        size = int(iw * self.originalImageZoom.get()), int(ih * self.originalImageZoom.get())
+        self.zoomedImage = ImageTk.PhotoImage(self.originalImage.resize(size))
+        self.originalImageCanvas.config(scrollregion=(0, 0, self.zoomedImage.width(), self.zoomedImage.height()),
+                                    yscrollcommand=self.originalImageVBar.set,
+                                    xscrollcommand=self.originalImageHBar.set) 
+        self.originalImageCanvas.create_image(0, 0, image=self.zoomedImage, anchor="nw")
+
+    def updateOrginalImage(self, event):
+        self.scale = self.originalImageZoom.get()
+        self.draw()
