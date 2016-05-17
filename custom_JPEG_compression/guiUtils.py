@@ -83,6 +83,16 @@ class GUIManager:
             file = askopenfilename(**fileOptions)
             if file is not None:
                 self.originalImage = Image.open(file)
+                
+                # L (8-bit pixels, black and white) it's different from take the Red band of RGB
+                # self.originalImage = self.originalImage.convert(mode="L")
+                width, height = self.originalImage.size
+                # take the Red band of RGB
+                self.pixels = list(self.originalImage.getdata(band=0))
+                self.pixels = [self.pixels[i * width:(i + 1) * width] for i in range(height)]
+                # print a sample
+                print (self.pixels[0])
+                
                 if self.originalImageCanvas is None:
                     self.originalImageLabel.pack_forget()
                     self.compressedImageLabel.config(text=_("Please set N and Quality values and press ") + 
