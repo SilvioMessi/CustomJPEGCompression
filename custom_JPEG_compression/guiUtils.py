@@ -1,7 +1,8 @@
 from tkinter import * 
 from PIL import Image, ImageTk
-
 from tkinter.filedialog import askopenfilename
+
+from custom_JPEG_compression.imgUtils import CompressionCore
 
 _ = lambda s: s
 
@@ -9,6 +10,7 @@ class GUIManager:
 
     def __init__(self, application, root):
         self.application = application
+        self.compressionCore = CompressionCore()
         self.root = root
         self.frame = Frame(self.root)
         self.frame.pack(expand=1, fill=BOTH)
@@ -18,7 +20,7 @@ class GUIManager:
         self.NValue.trace("w", callback=self.NValueChanged)
         self.originalImageZoom = IntVar()
         self.originalImageZoom.set(1)
- 
+
     def qualityValueChanged(self, *args):
         try :
             qualityValue = self.qualityValue.get()
@@ -30,10 +32,12 @@ class GUIManager:
     def NValueChanged(self, *args):
         try :
             NValue = self.NValue.get()
+            self.compressionCore.imageSquaring(N=NValue)
+            self.draw()
             if NValue < 1:
                 raise Exception
         except Exception:
-            self.NValue.set(1)    
+            self.NValue.set(1)
 
     def mainView(self): 
         # original image frame
@@ -100,17 +104,14 @@ class GUIManager:
         if openMode is True:
             file = askopenfilename(**fileOptions)
             if file is not None:
-                self.originalImage = Image.open(file)
-                
-                # L (8-bit pixels, black and white) it's different from take the Red band of RGB
-                # self.originalImage = self.originalImage.convert(mode="L")
-                width, height = self.originalImage.size
-                # take the Red band of RGB
-                self.pixels = list(self.originalImage.getdata(band=0))
-                self.pixels = [self.pixels[i * width:(i + 1) * width] for i in range(height)]
-                # print a sample
-                print (self.pixels[0])
-                
+                try :
+                    self.compressionCore.openImage(file)
+                except Exception:
+                    messagebox.showwarning(
+                            _("Error"),
+                            "It's impossible open the image.")
+                    return 
+                self.compressionCore.imageSquaring(self.NValue.get())
                 if self.originalImageCanvas is None:
                     self.originalImageLabel.pack_forget()
                     self.compressedImageLabel.config(text=_("Please set N and Quality values and press ") + 
@@ -139,7 +140,7 @@ class GUIManager:
                     self.draw()
 
     def compressImage(self):
-        self.compressedImage = ImageTk.PhotoImage(self.originalImage)
+        self.compressedImage = ImageTk.PhotoImage(self.compressionCore.squareImage)
         if self.compressedImageCanvas is None:
             self.compressedImageLabel.pack_forget()
             self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
@@ -158,9 +159,9 @@ class GUIManager:
         self.compressedImageCanvas.create_image(0, 0, image=self.compressedImage, anchor="nw")  
  
     def draw(self):
-        iw, ih = self.originalImage.size
+        iw, ih = self.compressionCore.squareImage.size
         size = int(iw * self.originalImageZoom.get()), int(ih * self.originalImageZoom.get())
-        self.zoomedImage = ImageTk.PhotoImage(self.originalImage.resize(size))
+        self.zoomedImage = ImageTk.PhotoImage(self.compressionCore.squareImage.resize(size))
         self.originalImageCanvas.config(scrollregion=(0, 0, self.zoomedImage.width(), self.zoomedImage.height()),
                                     yscrollcommand=self.originalImageVBar.set,
                                     xscrollcommand=self.originalImageHBar.set) 

@@ -11,6 +11,6 @@ class Application:
 
 if __name__ == '__main__':
     root = Tk()
-    root.title(_("METODI DEL CALCOLO SCIENTIFICO"))
+    root.title(_("METHODS OF SCIENTIFIC COMPUTING"))
     Application(root)
     root.mainloop()
