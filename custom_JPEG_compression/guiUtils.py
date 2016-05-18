@@ -13,9 +13,27 @@ class GUIManager:
         self.frame = Frame(self.root)
         self.frame.pack(expand=1, fill=BOTH)
         self.qualityValue = IntVar()
+        self.qualityValue.trace("w", callback=self.qualityValueChanged)
         self.NValue = IntVar()
+        self.NValue.trace("w", callback=self.NValueChanged)
         self.originalImageZoom = IntVar()
         self.originalImageZoom.set(1)
+ 
+    def qualityValueChanged(self, *args):
+        try :
+            qualityValue = self.qualityValue.get()
+            if qualityValue < 1:
+                raise Exception
+        except Exception:
+            self.qualityValue.set(1)
+
+    def NValueChanged(self, *args):
+        try :
+            NValue = self.NValue.get()
+            if NValue < 1:
+                raise Exception
+        except Exception:
+            self.NValue.set(1)    
 
     def mainView(self): 
         # original image frame
