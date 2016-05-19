@@ -16,6 +16,12 @@ class CompressionCore:
         self.squareImagePixels = None
         self.squareImageHeight = None
         self.squareImageWidth = None
+        
+        # compressed image
+        self.compressedImage = None
+        self.compressedImagePixels = None
+        self.compressedImageHeight = None
+        self.compressedImageWidth = None
 
     def openImage(self, path):
         try:
@@ -55,4 +61,18 @@ class CompressionCore:
         self.squareImageHeight = len(self.squareImagePixels) 
         self.squareImageWidth = len(self.squareImagePixels[0])
         self.squareImage = Image.new("L", (self.squareImageWidth, self.squareImageHeight))
-        self.squareImage.putdata([pixel for row in self.squareImagePixels for pixel in row])
+        self.squareImage.putdata([pixel for row in self.squareImagePixels for pixel in row])    
+
+    def imageZoom(self, zoom=1, original=True):
+        if zoom < 1 or zoom > 10:
+            zoom = 1
+        if original is True:
+            image = self.squareImage
+        else:
+            image = self.compressedImage
+        iw, ih = image.size
+        size = int(iw * zoom) , int(ih * zoom)
+        return image.resize(size)
+    
+    def compressImage(self):
+        self.compressedImage = self.squareImage

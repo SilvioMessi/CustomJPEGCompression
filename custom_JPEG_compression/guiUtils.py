@@ -1,5 +1,6 @@
 from tkinter import * 
-from PIL import Image, ImageTk
+from tkinter import messagebox
+from PIL import ImageTk
 from tkinter.filedialog import askopenfilename
 
 from custom_JPEG_compression.imgUtils import CompressionCore
@@ -20,6 +21,8 @@ class GUIManager:
         self.NValue.trace("w", callback=self.NValueChanged)
         self.originalImageZoom = IntVar()
         self.originalImageZoom.set(1)
+        self.copressedImageZoom = IntVar()
+        self.copressedImageZoom.set(1)
 
     def qualityValueChanged(self, *args):
         try :
@@ -33,7 +36,7 @@ class GUIManager:
         try :
             NValue = self.NValue.get()
             self.compressionCore.imageSquaring(N=NValue)
-            self.draw()
+            self.draw(original = True, zoom = False)
             if NValue < 1:
                 raise Exception
         except Exception:
@@ -55,6 +58,8 @@ class GUIManager:
                                                                                 "\"" + 
                                                                                 _(" button in options frame."))
         self.originalImageLabel.pack()
+        self.originalImageVBar = Scrollbar(self.originalImageContainerFrame, orient=VERTICAL)
+        self.originalImageHBar = Scrollbar(self.originalImageContainerFrame, orient=HORIZONTAL)
         self.originalImageCanvas = None
 
         # options frame
@@ -90,6 +95,8 @@ class GUIManager:
         self.compressedImageContainerFrame.pack(expand=1, fill=BOTH)
         self.compressedImageLabel = Label(self.compressedImageContainerFrame, text=_("Original image not yet loaded."))
         self.compressedImageLabel.pack()  
+        self.compressedImageVBar = Scrollbar(self.compressedImageContainerFrame, orient=VERTICAL)
+        self.compressedImageHBar = Scrollbar(self.compressedImageContainerFrame, orient=HORIZONTAL)
         self.compressedImageCanvas = None
 
     def fileDialog(self, fileOptions=None, mode='r', openMode=True):
@@ -103,16 +110,18 @@ class GUIManager:
             fileOptions['title'] = ''
         if openMode is True:
             file = askopenfilename(**fileOptions)
-            if file is not None:
+            if file is not None and file is not '':
                 try :
                     self.compressionCore.openImage(file)
+                    self.compressionCore.imageSquaring(self.NValue.get())
                 except Exception:
-                    messagebox.showwarning(
+                    messagebox.showerror(
                             _("Error"),
                             "It's impossible open the image.")
                     return 
-                self.compressionCore.imageSquaring(self.NValue.get())
+                
                 if self.originalImageCanvas is None:
+                    self.originalImageCanvas = Canvas(self.originalImageContainerFrame)
                     self.originalImageLabel.pack_forget()
                     self.compressedImageLabel.config(text=_("Please set N and Quality values and press ") + 
                                                             "\n" + 
@@ -123,50 +132,56 @@ class GUIManager:
                     self.qualityValueSpinbox.config(state=NORMAL)
                     self.NValueSpinbox.config(state=NORMAL)
                     self.compressImageButton.config(state=NORMAL)
-                    self.originalImageCanvas = Canvas(self.originalImageContainerFrame)
-                    self.originalImageHBar = Scrollbar(self.originalImageContainerFrame, orient=HORIZONTAL)
-                    self.originalImageHBar.pack(side=BOTTOM, fill=X)
-                    self.originalImageHBar.config(command=self.originalImageCanvas.xview)
-                    self.originalImageVBar = Scrollbar(self.originalImageContainerFrame, orient=VERTICAL)
-                    self.originalImageVBar.pack(side=RIGHT, fill=Y)
-                    self.originalImageVBar.config(command=self.originalImageCanvas.yview)
-                    self.originalImageCanvas.pack(expand=1, fill=BOTH)
-                    self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=1, to=10, orient=HORIZONTAL, command=self.updateOrginalImage)
+                    self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=1, to=10, orient=HORIZONTAL)
+                    self.originalImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(True))
                     self.originalImageScale.pack()
-                    # self.draw() called by updateOrginalImage
-                else:
-                    self.originalImageZoom.set(1)
-                    self.originalImageCanvas.delete("all")
-                    self.draw()
+                self.draw(original = True, zoom = False)
 
     def compressImage(self):
-        self.compressedImage = ImageTk.PhotoImage(self.compressionCore.squareImage)
+        self.compressionCore.compressImage()
         if self.compressedImageCanvas is None:
-            self.compressedImageLabel.pack_forget()
             self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
-            self.compressedImageHBar = Scrollbar(self.compressedImageContainerFrame, orient=HORIZONTAL)
-            self.compressedImageHBar.pack(side=BOTTOM, fill=X)
-            self.compressedImageHBar.config(command=self.compressedImageCanvas.xview)
-            self.compressedImageVBar = Scrollbar(self.compressedImageContainerFrame, orient=VERTICAL)
-            self.compressedImageVBar.pack(side=RIGHT, fill=Y)
-            self.compressedImageVBar.config(command=self.compressedImageCanvas.yview)
-            self.compressedImageCanvas.pack(expand=1, fill=BOTH)
-        else:
-            self.compressedImageCanvas.delete("all")
-        self.compressedImageCanvas.config(scrollregion=(0, 0, self.compressedImage.width(), self.compressedImage.height()),
-                                        yscrollcommand=self.compressedImageVBar.set,
-                                        xscrollcommand=self.compressedImageHBar.set) 
-        self.compressedImageCanvas.create_image(0, 0, image=self.compressedImage, anchor="nw")  
+            self.compressedImageLabel.pack_forget()
+            self.compressedImageScale = Scale(self.compressedImageLabelFrame, variable=self.copressedImageZoom, from_=1, to=10, orient=HORIZONTAL)
+            self.compressedImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(False))
+            self.compressedImageScale.pack()
+        self.draw(original=False, zoom=False)
  
-    def draw(self):
-        iw, ih = self.compressionCore.squareImage.size
-        size = int(iw * self.originalImageZoom.get()), int(ih * self.originalImageZoom.get())
-        self.zoomedImage = ImageTk.PhotoImage(self.compressionCore.squareImage.resize(size))
-        self.originalImageCanvas.config(scrollregion=(0, 0, self.zoomedImage.width(), self.zoomedImage.height()),
-                                    yscrollcommand=self.originalImageVBar.set,
-                                    xscrollcommand=self.originalImageHBar.set) 
-        self.originalImageCanvas.create_image(0, 0, image=self.zoomedImage, anchor="nw")
+    def draw(self, original = True,  zoom = False,):
+        if original is True:
+            canvas = self.originalImageCanvas
+            imageHBar = self.originalImageHBar
+            imageVBar = self.originalImageVBar
+            if zoom is False:
+                image = self.compressionCore.squareImage
+            else:
+                image = self.compressionCore.imageZoom(self.originalImageZoom.get(), original=True)
+        else: 
+            canvas = self.compressedImageCanvas
+            imageHBar = self.compressedImageHBar
+            imageVBar = self.compressedImageVBar
+            if zoom is False:
+                image = self.compressionCore.compressedImage
+            else:
+                image = self.compressionCore.imageZoom(self.copressedImageZoom.get(), original=False)
+        image =  ImageTk.PhotoImage(image)  
+        canvas.delete("all") 
+        imageHBar.pack(side=BOTTOM, fill=X)
+        imageHBar.config(command=canvas.xview)
+        imageVBar.pack(side=RIGHT, fill=Y)
+        imageVBar.config(command=canvas.yview)
+        canvas.config(scrollregion=(0, 0, image.width(), image.height()),
+                                    yscrollcommand=imageVBar.set,
+                                    xscrollcommand=imageHBar.set) 
+        canvas.create_image(0, 0, image=image, anchor="nw")
+        if original is True:
+            self.compressionCore.squareImageReference = image
+        else:
+            self.compressionCore.compressedImageReference = image
+        canvas.pack(expand=1, fill=BOTH)
 
-    def updateOrginalImage(self, event):
-        self.scale = self.originalImageZoom.get()
-        self.draw()
+    def updateImageZoom(self, original):
+        if original is True:
+            self.draw(original=True, zoom = True)
+        else:
+            self.draw(original=False, zoom = True)
