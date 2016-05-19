@@ -11,6 +11,7 @@ class Application:
 
 if __name__ == '__main__':
     root = Tk()
+    root.geometry('{}x{}'.format(root.winfo_screenwidth(), root.winfo_screenheight()))
     root.title(_("METHODS OF SCIENTIFIC COMPUTING"))
     Application(root)
     root.mainloop()

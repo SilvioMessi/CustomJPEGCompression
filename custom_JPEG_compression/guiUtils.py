@@ -36,7 +36,7 @@ class GUIManager:
         try :
             NValue = self.NValue.get()
             self.compressionCore.imageSquaring(N=NValue)
-            self.draw(original = True, zoom = False)
+            self.drawImage(original=True, zoom=False)
             if NValue < 1:
                 raise Exception
         except Exception:
@@ -119,35 +119,37 @@ class GUIManager:
                             _("Error"),
                             "It's impossible open the image.")
                     return 
-                
-                if self.originalImageCanvas is None:
-                    self.originalImageCanvas = Canvas(self.originalImageContainerFrame)
-                    self.originalImageLabel.pack_forget()
-                    self.compressedImageLabel.config(text=_("Please set N and Quality values and press ") + 
-                                                            "\n" + 
-                                                            "\"" + 
-                                                            _("Compress image") + 
-                                                            "\"" + 
-                                                            _(" button in options frame."))
-                    self.qualityValueSpinbox.config(state=NORMAL)
-                    self.NValueSpinbox.config(state=NORMAL)
-                    self.compressImageButton.config(state=NORMAL)
-                    self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=1, to=10, orient=HORIZONTAL)
-                    self.originalImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(True))
-                    self.originalImageScale.pack()
-                self.draw(original = True, zoom = False)
+                self.updateGUI(original=True)
+   
+    def updateGUI(self, original=True):
+        if original is True:
+            if self.originalImageCanvas is None:
+                self.originalImageCanvas = Canvas(self.originalImageContainerFrame)
+                self.originalImageLabel.pack_forget()
+                self.compressedImageLabel.config(text=_("Please set N and Quality values and press ") + 
+                                                        "\n" + 
+                                                        "\"" + 
+                                                        _("Compress image") + 
+                                                        "\"" + 
+                                                        _(" button in options frame."))
+                self.qualityValueSpinbox.config(state=NORMAL)
+                self.NValueSpinbox.config(state=NORMAL)
+                self.compressImageButton.config(state=NORMAL)
+                self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=1, to=10, orient=HORIZONTAL)
+                self.originalImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(True))
+                self.originalImageScale.pack()
+            self.originalImageZoom.set(1)
+        else:
+            if self.compressedImageCanvas is None:
+                self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
+                self.compressedImageLabel.pack_forget()
+                self.compressedImageScale = Scale(self.compressedImageLabelFrame, variable=self.copressedImageZoom, from_=1, to=10, orient=HORIZONTAL)
+                self.compressedImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(False))
+                self.compressedImageScale.pack()
+            self.copressedImageZoom.set(1)            
+        self.drawImage(original=original, zoom=False)
 
-    def compressImage(self):
-        self.compressionCore.compressImage()
-        if self.compressedImageCanvas is None:
-            self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
-            self.compressedImageLabel.pack_forget()
-            self.compressedImageScale = Scale(self.compressedImageLabelFrame, variable=self.copressedImageZoom, from_=1, to=10, orient=HORIZONTAL)
-            self.compressedImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(False))
-            self.compressedImageScale.pack()
-        self.draw(original=False, zoom=False)
- 
-    def draw(self, original = True,  zoom = False,):
+    def drawImage(self, original=True, zoom=False,):
         if original is True:
             canvas = self.originalImageCanvas
             imageHBar = self.originalImageHBar
@@ -164,7 +166,7 @@ class GUIManager:
                 image = self.compressionCore.compressedImage
             else:
                 image = self.compressionCore.imageZoom(self.copressedImageZoom.get(), original=False)
-        image =  ImageTk.PhotoImage(image)  
+        image = ImageTk.PhotoImage(image)  
         canvas.delete("all") 
         imageHBar.pack(side=BOTTOM, fill=X)
         imageHBar.config(command=canvas.xview)
@@ -182,6 +184,10 @@ class GUIManager:
 
     def updateImageZoom(self, original):
         if original is True:
-            self.draw(original=True, zoom = True)
+            self.drawImage(original=True, zoom=True)
         else:
-            self.draw(original=False, zoom = True)
+            self.drawImage(original=False, zoom=True)
+
+    def compressImage(self):
+        self.compressionCore.compressImage()
+        self.updateGUI(original=False)
