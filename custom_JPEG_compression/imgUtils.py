@@ -54,5 +54,5 @@ class CompressionCore:
                 self.squareImagePixels.extend([self.originalImagePixels[self.originalImageHeight - 1]]) 
         self.squareImageHeight = len(self.squareImagePixels) 
         self.squareImageWidth = len(self.squareImagePixels[0])
-        self.squareImage = Image.new("L", (self.squareImageHeight, self.squareImageWidth))
+        self.squareImage = Image.new("L", (self.squareImageWidth, self.squareImageHeight))
         self.squareImage.putdata([pixel for row in self.squareImagePixels for pixel in row])
