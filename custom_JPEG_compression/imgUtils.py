@@ -26,17 +26,18 @@ class CompressionCore:
     def openImage(self, path):
         try:
             self.originalImage = Image.open(path)
-            self.getImagePixel()
+            self.originalImagePixels, self.originalImageWidth, self.originalImageWidth = self.getImagePixel(self.originalImage)
         except Exception:
             self.originalImage = None
             self.originalImagePixels = None
             raise Exception
 
-    def getImagePixel(self):
-        self.originalImageWidth, self.originalImageHeight = self.originalImage.size
+    def getImagePixel(self, image):
+        imageWidth, imageHeight = image.size
         # take the red band if the image use RGB. Evaluate if use convertImageToGrayscale method
-        pixelsList = list(self.originalImage.getdata(band=0))
-        self.originalImagePixels = [pixelsList[i * self.originalImageWidth:(i + 1) * self.originalImageWidth] for i in range(self.originalImageHeight)]
+        pixelsList = list(image.getdata(band=0))
+        pixelsMatrix = [pixelsList[i * imageWidth:(i + 1) * imageWidth] for i in range(imageHeight)]
+        return pixelsMatrix, imageWidth, imageHeight
 
     def convertImageToGrayscale(self):
         # L (8-bit pixels, black and white)
@@ -45,23 +46,22 @@ class CompressionCore:
     def imageSquaring(self, N=1):
         if N < 1:
             N = 1
-        # list(self.originalImagePixels) it'very important! Create a COPY of original list
-        self.squareImagePixels = list(self.originalImagePixels)
+        self.squareImagePixels, width, height = self.getImagePixel(self.originalImage)
         blockSize = STANDARD_JPEG_BLOCK_SIZE * N 
-        widthModulo = self.originalImageWidth % blockSize
-        heigthModulo = self.originalImageHeight % blockSize
+        widthModulo = width % blockSize
+        heigthModulo = height % blockSize
         if widthModulo != 0:
             reachBlockSize = blockSize - widthModulo
-            for index, row in enumerate(self.originalImagePixels):
-                self.squareImagePixels[index].extend([row[self.originalImageWidth - 1]] * reachBlockSize)
+            for row in self.squareImagePixels:
+                row.extend([row[width - 1]] * reachBlockSize)
         if heigthModulo != 0:
             reachBlockSize = blockSize - heigthModulo
-            for index in range(self.originalImageHeight, self.originalImageHeight + reachBlockSize):
-                self.squareImagePixels.extend([self.originalImagePixels[self.originalImageHeight - 1]]) 
+            for _ in range(height, height + reachBlockSize):
+                self.squareImagePixels.extend([self.squareImagePixels[height - 1]]) 
         self.squareImageHeight = len(self.squareImagePixels) 
         self.squareImageWidth = len(self.squareImagePixels[0])
         self.squareImage = Image.new("L", (self.squareImageWidth, self.squareImageHeight))
-        self.squareImage.putdata([pixel for row in self.squareImagePixels for pixel in row])    
+        self.squareImage.putdata([pixel for row in self.squareImagePixels for pixel in row])
 
     def imageZoom(self, zoom=1, original=True):
         if zoom < 1 or zoom > 10:
