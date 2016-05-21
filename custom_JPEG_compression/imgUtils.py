@@ -1,4 +1,5 @@
 from PIL import Image
+import numpy as np
 
 STANDARD_JPEG_BLOCK_SIZE = 8 
 
@@ -22,6 +23,8 @@ class CompressionCore:
         self.compressedImagePixels = None
         self.compressedImageHeight = None
         self.compressedImageWidth = None
+        
+        self.blockSizeMoltiplicator = 1
 
     def openImage(self, path):
         try:
@@ -39,15 +42,29 @@ class CompressionCore:
         pixelsMatrix = [pixelsList[i * imageWidth:(i + 1) * imageWidth] for i in range(imageHeight)]
         return pixelsMatrix, imageWidth, imageHeight
 
-    def convertImageToGrayscale(self):
+    def convertImageToGrayscale(self, image):
         # L (8-bit pixels, black and white)
-        self.originalImage = self.originalImage.convert(mode="L")
-
+        return image.convert(mode="L")
+    
+    def splitImage(self, image, blockSize):
+        imagePixelsMatrix, imageWidth, imageHeight = self.getImagePixel(image)
+        imagePixelsMatrix = np.array(imagePixelsMatrix)
+        assert (imageWidth % blockSize == 0)
+        assert (imageHeight % blockSize == 0) 
+        imageBlocksMatrix = []
+        for heightIndex in range (0, imageHeight, blockSize):
+            blocksRow =[]
+            for widthIndex in range (0, imageWidth, blockSize):
+                blocksRow.append(imagePixelsMatrix[heightIndex: heightIndex+blockSize, widthIndex: widthIndex+blockSize])
+            imageBlocksMatrix.append(blocksRow)
+        return imageBlocksMatrix
+   
     def imageSquaring(self, N=1):
         if N < 1:
             N = 1
+        self.blockSizeMoltiplicator = N
         self.squareImagePixels, width, height = self.getImagePixel(self.originalImage)
-        blockSize = STANDARD_JPEG_BLOCK_SIZE * N 
+        blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         widthModulo = width % blockSize
         heigthModulo = height % blockSize
         if widthModulo != 0:
@@ -73,6 +90,9 @@ class CompressionCore:
         iw, ih = image.size
         size = int(iw * zoom) , int(ih * zoom)
         return image.resize(size)
-    
+
     def compressImage(self):
-        self.compressedImage = self.squareImage
+        blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
+        self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
+        self.compressedImage = Image.new("L", (blockSize, blockSize))
+        self.compressedImage.putdata([pixel for row in self.imageBlocksMatrix[0][0] for pixel in row])

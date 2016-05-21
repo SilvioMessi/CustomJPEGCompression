@@ -35,10 +35,10 @@ class GUIManager:
     def NValueChanged(self, *args):
         try :
             NValue = self.NValue.get()
-            self.compressionCore.imageSquaring(N=NValue)
-            self.drawImage(original=True, zoom=False)
             if NValue < 1:
                 raise Exception
+            self.compressionCore.imageSquaring(N=NValue)
+            self.drawImage(original=True, zoom=False)
         except Exception:
             self.NValue.set(1)
 
@@ -139,6 +139,7 @@ class GUIManager:
                 self.originalImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(True))
                 self.originalImageScale.pack()
             self.originalImageZoom.set(1)
+            self.NValue.set(1)
         else:
             if self.compressedImageCanvas is None:
                 self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
