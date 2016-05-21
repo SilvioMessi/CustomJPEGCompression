@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+import scipy.fftpack
 
 STANDARD_JPEG_BLOCK_SIZE = 8 
 
@@ -17,19 +18,19 @@ class CompressionCore:
         self.squareImagePixels = None
         self.squareImageHeight = None
         self.squareImageWidth = None
-        
+
         # compressed image
         self.compressedImage = None
         self.compressedImagePixels = None
         self.compressedImageHeight = None
         self.compressedImageWidth = None
-        
+
         self.blockSizeMoltiplicator = 1
 
     def openImage(self, path):
         try:
             self.originalImage = Image.open(path)
-            self.originalImagePixels, self.originalImageWidth, self.originalImageWidth = self.getImagePixel(self.originalImage)
+            self.originalImagePixels, self.originalImageWidth, self.originalImageHeight = self.getImagePixel(self.originalImage)
         except Exception:
             self.originalImage = None
             self.originalImagePixels = None
@@ -45,7 +46,7 @@ class CompressionCore:
     def convertImageToGrayscale(self, image):
         # L (8-bit pixels, black and white)
         return image.convert(mode="L")
-    
+
     def splitImage(self, image, blockSize):
         imagePixelsMatrix, imageWidth, imageHeight = self.getImagePixel(image)
         imagePixelsMatrix = np.array(imagePixelsMatrix)
@@ -53,12 +54,12 @@ class CompressionCore:
         assert (imageHeight % blockSize == 0) 
         imageBlocksMatrix = []
         for heightIndex in range (0, imageHeight, blockSize):
-            blocksRow =[]
+            blocksRow = []
             for widthIndex in range (0, imageWidth, blockSize):
-                blocksRow.append(imagePixelsMatrix[heightIndex: heightIndex+blockSize, widthIndex: widthIndex+blockSize])
+                blocksRow.append(imagePixelsMatrix[heightIndex: heightIndex + blockSize, widthIndex: widthIndex + blockSize])
             imageBlocksMatrix.append(blocksRow)
         return imageBlocksMatrix
-   
+
     def imageSquaring(self, N=1):
         if N < 1:
             N = 1
@@ -91,6 +92,21 @@ class CompressionCore:
         size = int(iw * zoom) , int(ih * zoom)
         return image.resize(size)
 
+    def DCT2(self, pixelsMatrix):
+        hight = len(pixelsMatrix)
+        width = len(pixelsMatrix[0])
+        assert (hight == width)
+        pixelsMatrix = np.array(pixelsMatrix)
+        dct2PixelsMatrix = np.empty(shape=(hight, width))
+        for rowIndex in range(0, hight):
+            dct2PixelsMatrix[rowIndex, :] = self.DCT1(pixelsMatrix[rowIndex, :])
+        for columIndex in range(0, width):
+            dct2PixelsMatrix[ :, columIndex] = self.DCT1(dct2PixelsMatrix[:, columIndex])
+        return dct2PixelsMatrix
+
+    def DCT1(self, pixels): 
+        return scipy.fftpack.dct(pixels, norm='ortho')
+   
     def compressImage(self):
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
