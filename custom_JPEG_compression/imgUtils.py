@@ -3,6 +3,14 @@ import numpy as np
 import scipy.fftpack
 
 STANDARD_JPEG_BLOCK_SIZE = 8 
+Q_MATRIX = [[16, 11, 10, 16, 24, 40, 51, 61],
+            [12, 12, 14, 19, 26, 58, 60, 55],
+            [14, 13, 16, 24, 40, 57, 69, 56],
+            [14, 17, 22, 29, 51, 87, 80, 62],
+            [18, 22, 37, 56, 68, 109, 103, 77],
+            [24, 35, 55, 64, 81, 104, 113, 92],
+            [49, 64, 78, 87, 103, 121, 120, 101],
+            [72, 92, 95, 98, 112, 100, 103, 99]]
 
 class CompressionCore:
 
@@ -106,8 +114,35 @@ class CompressionCore:
 
     def DCT1(self, pixels): 
         return scipy.fftpack.dct(pixels, norm='ortho')
-   
-    def compressImage(self):
+
+    def computeQualityFactor(self, quality): 
+        if quality <= 0:
+            quality = 1
+        elif quality > 100:
+            quality = 100
+        if quality >= 50:
+            qf = (200 - 2 * quality) / 100
+        else:
+            qf = (5000 / quality) / 100
+        return qf
+
+    def compute8X8QuantizationMaxtrix(self, quality):
+        qf = self.computeQualityFactor(quality)
+        Q1 = np.round(qf * np.array(Q_MATRIX))
+        return Q1
+
+    def compute8NX8NQuantizationMaxtrix(self, quality):
+        originalQM = self.compute8X8QuantizationMaxtrix(quality)
+        quantizationMatrix = np.zeros([STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator, STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator])
+        matrixHeight, matrixWidth = originalQM.shape
+        for heightIndex in range (0, matrixHeight):
+            for widthIndex in range (0, matrixWidth):
+                NheightIndex = heightIndex * self.blockSizeMoltiplicator
+                NwidthIndex = widthIndex * self.blockSizeMoltiplicator
+                quantizationMatrix[NheightIndex :NheightIndex + self.blockSizeMoltiplicator, NwidthIndex :NwidthIndex + self.blockSizeMoltiplicator] = originalQM[heightIndex, widthIndex]
+        return quantizationMatrix
+
+    def compressImage(self, quality):
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
         self.compressedImage = Image.new("L", (blockSize, blockSize))

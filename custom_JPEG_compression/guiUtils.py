@@ -190,5 +190,5 @@ class GUIManager:
             self.drawImage(original=False, zoom=True)
 
     def compressImage(self):
-        self.compressionCore.compressImage()
+        self.compressionCore.compressImage(self.qualityValue.get())
         self.updateGUI(original=False)
