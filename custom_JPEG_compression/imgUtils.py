@@ -3,14 +3,14 @@ import numpy as np
 import scipy.fftpack
 
 STANDARD_JPEG_BLOCK_SIZE = 8 
-Q_MATRIX = [[16, 11, 10, 16, 24, 40, 51, 61],
-            [12, 12, 14, 19, 26, 58, 60, 55],
-            [14, 13, 16, 24, 40, 57, 69, 56],
-            [14, 17, 22, 29, 51, 87, 80, 62],
-            [18, 22, 37, 56, 68, 109, 103, 77],
-            [24, 35, 55, 64, 81, 104, 113, 92],
-            [49, 64, 78, 87, 103, 121, 120, 101],
-            [72, 92, 95, 98, 112, 100, 103, 99]]
+Q_MATRIX = np.asarray([[16, 11, 10, 16, 24, 40, 51, 61],
+                        [12, 12, 14, 19, 26, 58, 60, 55],
+                        [14, 13, 16, 24, 40, 57, 69, 56],
+                        [14, 17, 22, 29, 51, 87, 80, 62],
+                        [18, 22, 37, 56, 68, 109, 103, 77],
+                        [24, 35, 55, 64, 81, 104, 113, 92],
+                        [49, 64, 78, 87, 103, 121, 120, 101],
+                        [72, 92, 95, 98, 112, 100, 103, 99]])
 
 class CompressionCore:
 
@@ -38,7 +38,8 @@ class CompressionCore:
     def openImage(self, path):
         try:
             self.originalImage = Image.open(path)
-            self.originalImagePixels, self.originalImageWidth, self.originalImageHeight = self.getImagePixel(self.originalImage)
+            self.originalImagePixels = self.getImagePixel(self.originalImage)
+            self.originalImageWidth, self.originalImageHeight = self.originalImagePixels.shape
         except Exception:
             self.originalImage = None
             self.originalImagePixels = None
@@ -47,17 +48,17 @@ class CompressionCore:
     def getImagePixel(self, image):
         imageWidth, imageHeight = image.size
         # take the red band if the image use RGB. Evaluate if use convertImageToGrayscale method
-        pixelsList = list(image.getdata(band=0))
-        pixelsMatrix = [pixelsList[i * imageWidth:(i + 1) * imageWidth] for i in range(imageHeight)]
-        return pixelsMatrix, imageWidth, imageHeight
+        pixelsArray = np.asarray(image.getdata(band=0))
+        pixelsMatrix = pixelsArray.reshape(imageHeight, imageWidth)
+        return pixelsMatrix
 
     def convertImageToGrayscale(self, image):
         # L (8-bit pixels, black and white)
         return image.convert(mode="L")
 
     def splitImage(self, image, blockSize):
-        imagePixelsMatrix, imageWidth, imageHeight = self.getImagePixel(image)
-        imagePixelsMatrix = np.array(imagePixelsMatrix)
+        imagePixelsMatrix = self.getImagePixel(image)
+        imageWidth, imageHeight = imagePixelsMatrix.shape
         assert (imageWidth % blockSize == 0)
         assert (imageHeight % blockSize == 0) 
         imageBlocksMatrix = []
@@ -66,16 +67,18 @@ class CompressionCore:
             for widthIndex in range (0, imageWidth, blockSize):
                 blocksRow.append(imagePixelsMatrix[heightIndex: heightIndex + blockSize, widthIndex: widthIndex + blockSize])
             imageBlocksMatrix.append(blocksRow)
-        return imageBlocksMatrix
+        return np.asarray(imageBlocksMatrix)
 
     def imageSquaring(self, N=1):
         if N < 1:
             N = 1
         self.blockSizeMoltiplicator = N
-        self.squareImagePixels, width, height = self.getImagePixel(self.originalImage)
+        self.squareImagePixels = self.getImagePixel(self.originalImage)
+        height, width = self.squareImagePixels.shape
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         widthModulo = width % blockSize
         heigthModulo = height % blockSize
+        self.squareImagePixels = self.squareImagePixels.tolist()
         if widthModulo != 0:
             reachBlockSize = blockSize - widthModulo
             for row in self.squareImagePixels:
@@ -83,11 +86,11 @@ class CompressionCore:
         if heigthModulo != 0:
             reachBlockSize = blockSize - heigthModulo
             for _ in range(height, height + reachBlockSize):
-                self.squareImagePixels.extend([self.squareImagePixels[height - 1]]) 
-        self.squareImageHeight = len(self.squareImagePixels) 
-        self.squareImageWidth = len(self.squareImagePixels[0])
+                self.squareImagePixels.extend([self.squareImagePixels[height - 1]])
+        self.squareImagePixels = np.asarray(self.squareImagePixels)
+        self.squareImageHeight, self.squareImageWidth = self.squareImagePixels.shape
         self.squareImage = Image.new("L", (self.squareImageWidth, self.squareImageHeight))
-        self.squareImage.putdata([pixel for row in self.squareImagePixels for pixel in row])
+        self.squareImage.putdata(self.squareImagePixels.flatten())
 
     def imageZoom(self, zoom=1, original=True):
         if zoom < 1 or zoom > 10:
@@ -101,10 +104,8 @@ class CompressionCore:
         return image.resize(size)
 
     def DCT2(self, pixelsMatrix):
-        hight = len(pixelsMatrix)
-        width = len(pixelsMatrix[0])
+        hight, width = pixelsMatrix.shape
         assert (hight == width)
-        pixelsMatrix = np.array(pixelsMatrix)
         dct2PixelsMatrix = np.empty(shape=(hight, width))
         for rowIndex in range(0, hight):
             dct2PixelsMatrix[rowIndex, :] = self.DCT1(pixelsMatrix[rowIndex, :])
@@ -146,4 +147,4 @@ class CompressionCore:
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
         self.compressedImage = Image.new("L", (blockSize, blockSize))
-        self.compressedImage.putdata([pixel for row in self.imageBlocksMatrix[0][0] for pixel in row])
+        self.compressedImage.putdata([pixel for row in self.imageBlocksMatrix[0, 0] for pixel in row])
