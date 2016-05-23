@@ -157,10 +157,33 @@ class CompressionCore:
                 quantizationMatrix[NheightIndex :NheightIndex + self.blockSizeMoltiplicator, NwidthIndex :NwidthIndex + self.blockSizeMoltiplicator] = originalQM[heightIndex, widthIndex]
         return quantizationMatrix
 
+    def quantizeImage(self, block, quantizationMatrix):
+        step1 = np.divide(block, quantizationMatrix)
+        step2 = np.round(step1)
+        step3 = np.multiply(step2, quantizationMatrix)
+        return step3
+
     def compressImage(self, quality):
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
-        restoredImage = self.restoreImage(self.imageBlocksMatrix)
+        self.imageCompressedBlocksMatrix = np.empty_like(self.imageBlocksMatrix)
+        heigth, width, _, _ = self.imageBlocksMatrix.shape
+        quantizationMatrix = self.compute8NX8NQuantizationMaxtrix(quality)
+        for x in range(0, heigth):
+            for y in range(0, width):
+                block = self.imageBlocksMatrix[x, y]
+                block = self.DCT2(block)
+                block = self.quantizeImage(block, quantizationMatrix)
+                block = self.DCT2(block, inverse=True)
+                for (a, b), item in np.ndenumerate(block):
+                    if item > 255:
+                        block[a, b] = 255
+                    elif item < 0:
+                        block[a, b] = 0
+                    else: 
+                        block[a, b] = round(item)
+                self.imageCompressedBlocksMatrix[x, y] = block
+        restoredImage = self.restoreImage(self.imageCompressedBlocksMatrix)
         height, width = restoredImage.shape
         self.compressedImage = Image.new("L", (width, height))
         self.compressedImage.putdata(restoredImage.flatten())
