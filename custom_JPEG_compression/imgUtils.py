@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy as np
 import scipy.fftpack
+import decimal
 
 STANDARD_JPEG_BLOCK_SIZE = 8 
 Q_MATRIX = np.asarray([[16, 11, 10, 16, 24, 40, 51, 61],
@@ -141,9 +142,18 @@ class CompressionCore:
             qf = (5000 / quality) / 100
         return qf
 
+    def myRoundQuantizationMatrix(self, x):
+        y = int(decimal.Decimal(x).quantize(decimal.Decimal('1'), rounding=decimal.ROUND_HALF_UP))
+        if y <= 0:
+            y = 1
+        elif y > 255:
+            y = 255
+        return y
+
     def compute8X8QuantizationMaxtrix(self, quality):
         qf = self.computeQualityFactor(quality)
-        Q1 = np.round(qf * np.array(Q_MATRIX))
+        myRound = np.vectorize(self.myRoundQuantizationMatrix)
+        Q1 = myRound(qf * np.array(Q_MATRIX))
         return Q1
 
     def compute8NX8NQuantizationMaxtrix(self, quality):
@@ -159,9 +169,19 @@ class CompressionCore:
 
     def quantizeImage(self, block, quantizationMatrix):
         step1 = np.divide(block, quantizationMatrix)
-        step2 = np.round(step1)
+        myRound = np.vectorize(lambda x : int(decimal.Decimal(x).quantize(decimal.Decimal('1'), rounding=decimal.ROUND_HALF_UP)))
+        step2 = myRound(step1)
         step3 = np.multiply(step2, quantizationMatrix)
         return step3
+
+    def add128RoundClamp(self, x):
+        x = x + 128
+        x = int(decimal.Decimal(x).quantize(decimal.Decimal('1'), rounding=decimal.ROUND_HALF_UP))
+        if x > 255:
+            return 255
+        elif x < 0:
+            return 0
+        return x
 
     def compressImage(self, quality):
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
@@ -172,16 +192,13 @@ class CompressionCore:
         for x in range(0, heigth):
             for y in range(0, width):
                 block = self.imageBlocksMatrix[x, y]
+                subtract128 = np.vectorize(lambda x: x - 128)
+                block = subtract128(block)
                 block = self.DCT2(block)
                 block = self.quantizeImage(block, quantizationMatrix)
                 block = self.DCT2(block, inverse=True)
-                for (a, b), item in np.ndenumerate(block):
-                    if item > 255:
-                        block[a, b] = 255
-                    elif item < 0:
-                        block[a, b] = 0
-                    else: 
-                        block[a, b] = round(item)
+                add128RoundClamp = np.vectorize(self.add128RoundClamp)
+                block = add128RoundClamp(block)
                 self.imageCompressedBlocksMatrix[x, y] = block
         restoredImage = self.restoreImage(self.imageCompressedBlocksMatrix)
         height, width = restoredImage.shape
