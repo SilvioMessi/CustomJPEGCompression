@@ -33,16 +33,24 @@ class Test(unittest.TestCase):
                                     [193, 70, 174, 167, 41, 30, 127, 245],
                                     [ 87, 149, 57, 192, 65, 129, 178, 228]])
         compressionCore = CompressionCore()
-        np.set_printoptions(precision=3, linewidth=200)
-        print ("DTC1 TEST")
-        print (pixelsMatrix[1,:])
-        print (compressionCore.DCT1(pixelsMatrix[1,:]))
+        np.set_printoptions(precision=8, linewidth=200)
+        print ("DCT1 TEST")
+        print (pixelsMatrix[0, :])
+        print (compressionCore.DCT1(pixelsMatrix[0, :]))
         print (TEST_SEPARATOR)
-        print ("DTC2 TEST")
+        print ("DCT2 TEST")
         print (pixelsMatrix)
         print (compressionCore.DCT2(pixelsMatrix))
         print (TEST_SEPARATOR)
-    
+        print ("IDCT1 TEST")
+        print (pixelsMatrix[0, :])
+        print (compressionCore.DCT1(pixelsMatrix[0, :], inverse=True))
+        print (TEST_SEPARATOR)
+        print ("IDCT2 TEST")
+        print (pixelsMatrix)
+        print (compressionCore.DCT2(pixelsMatrix, inverse=True))
+        print (TEST_SEPARATOR)
+
     def testQuantizationMatrix(self):
         quality80QuantizationMatrix = np.asarray ([[6, 4, 4, 6, 10, 16, 20, 24],
                                                     [5, 5, 6, 8, 10, 23, 24, 22],

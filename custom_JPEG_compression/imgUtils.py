@@ -103,18 +103,21 @@ class CompressionCore:
         size = int(iw * zoom) , int(ih * zoom)
         return image.resize(size)
 
-    def DCT2(self, pixelsMatrix):
+    def DCT2(self, pixelsMatrix, inverse=False):
         hight, width = pixelsMatrix.shape
         assert (hight == width)
         dct2PixelsMatrix = np.empty(shape=(hight, width))
         for rowIndex in range(0, hight):
-            dct2PixelsMatrix[rowIndex, :] = self.DCT1(pixelsMatrix[rowIndex, :])
+            dct2PixelsMatrix[rowIndex, :] = self.DCT1(pixelsMatrix[rowIndex, :], inverse=inverse)
         for columIndex in range(0, width):
-            dct2PixelsMatrix[ :, columIndex] = self.DCT1(dct2PixelsMatrix[:, columIndex])
+            dct2PixelsMatrix[ :, columIndex] = self.DCT1(dct2PixelsMatrix[:, columIndex], inverse=inverse)
         return dct2PixelsMatrix
 
-    def DCT1(self, pixels): 
-        return scipy.fftpack.dct(pixels, norm='ortho')
+    def DCT1(self, pixels, inverse=False):
+        if inverse is False:
+            return scipy.fftpack.dct(pixels, norm='ortho')
+        else:
+            return scipy.fftpack.idct(pixels, norm='ortho')
 
     def computeQualityFactor(self, quality): 
         if quality <= 0:
@@ -147,4 +150,4 @@ class CompressionCore:
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
         self.compressedImage = Image.new("L", (blockSize, blockSize))
-        self.compressedImage.putdata([pixel for row in self.imageBlocksMatrix[0, 0] for pixel in row])
+        self.compressedImage.putdata(self.imageBlocksMatrix[0, 0].flatten())
