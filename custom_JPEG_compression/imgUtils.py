@@ -58,7 +58,7 @@ class CompressionCore:
 
     def splitImage(self, image, blockSize):
         imagePixelsMatrix = self.getImagePixel(image)
-        imageWidth, imageHeight = imagePixelsMatrix.shape
+        imageHeight, imageWidth = imagePixelsMatrix.shape
         assert (imageWidth % blockSize == 0)
         assert (imageHeight % blockSize == 0) 
         imageBlocksMatrix = []
@@ -68,6 +68,17 @@ class CompressionCore:
                 blocksRow.append(imagePixelsMatrix[heightIndex: heightIndex + blockSize, widthIndex: widthIndex + blockSize])
             imageBlocksMatrix.append(blocksRow)
         return np.asarray(imageBlocksMatrix)
+
+    def restoreImage(self, imageBlocksMatrix):
+        restoredImage = np.empty_like(self.squareImagePixels)
+        blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
+        heigth, width, _, _ = imageBlocksMatrix.shape
+        for x in range(0, heigth):
+            for y in range(0, width):
+                heightIndex = x * blockSize
+                widthIndex = y * blockSize
+                restoredImage[heightIndex:heightIndex + blockSize, widthIndex: widthIndex + blockSize ] = imageBlocksMatrix[x, y]
+        return restoredImage
 
     def imageSquaring(self, N=1):
         if N < 1:
@@ -149,5 +160,7 @@ class CompressionCore:
     def compressImage(self, quality):
         blockSize = STANDARD_JPEG_BLOCK_SIZE * self.blockSizeMoltiplicator
         self.imageBlocksMatrix = self.splitImage(self.squareImage, blockSize)
-        self.compressedImage = Image.new("L", (blockSize, blockSize))
-        self.compressedImage.putdata(self.imageBlocksMatrix[0, 0].flatten())
+        restoredImage = self.restoreImage(self.imageBlocksMatrix)
+        height, width = restoredImage.shape
+        self.compressedImage = Image.new("L", (width, height))
+        self.compressedImage.putdata(restoredImage.flatten())
