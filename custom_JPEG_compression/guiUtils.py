@@ -16,31 +16,24 @@ class GUIManager:
         self.frame = Frame(self.root)
         self.frame.pack(expand=1, fill=BOTH)
         self.qualityValue = IntVar()
-        self.qualityValue.trace("w", callback=self.qualityValueChanged)
+        self.qualityValue.set(50)
         self.NValue = IntVar()
-        self.NValue.trace("w", callback=self.NValueChanged)
+        self.NValue.set(1)
         self.originalImageZoom = IntVar()
         self.originalImageZoom.set(0)
         self.compressedImageZoom = IntVar()
         self.compressedImageZoom.set(0)
 
     def qualityValueChanged(self, *args):
-        try :
-            qualityValue = self.qualityValue.get()
-            if qualityValue < 1:
-                raise Exception
-        except Exception:
-            self.qualityValue.set(1)
+        qualityValue = self.qualityValue.get()
+        self.qualityValueLabel.config(text=_("Quality : {}".format(qualityValue)))
 
     def NValueChanged(self, *args):
-        try :
-            NValue = self.NValue.get()
-            if NValue < 1:
-                raise Exception
+        NValue = self.NValue.get()
+        self.NValueLabel.config(text=_("N : {}".format(NValue)))
+        if self.compressionCore.originalImage is not None:
             self.compressionCore.imageSquaring(N=NValue)
             self.drawImage(original=True, zoom=False)
-        except Exception:
-            self.NValue.set(1)
 
     def mainView(self): 
         # original image frame
@@ -69,20 +62,18 @@ class GUIManager:
         self.optionsLabelFrame.pack(expand=1, fill=BOTH, padx=5, pady=5)
         self.openFileButton = Button(self.optionsLabelFrame, text=_("Load image"), command=lambda: self.fileDialog())
         self.openFileButton.pack()
-        self.NValueFrame = Frame(self.optionsLabelFrame, height=20, width=200)
-        self.NValueFrame.pack(padx=5, pady=5)
-        self.NValueFrame.pack_propagate(0)
-        self.NValueLabel = Label(self.NValueFrame, text=_("N") + ":")
-        self.NValueLabel.pack(anchor=W, side=LEFT)
-        self.NValueSpinbox = Spinbox(self.NValueFrame, textvariable=self.NValue, from_=1, to=1000, state=DISABLED)
-        self.NValueSpinbox.pack(anchor=W, side=LEFT)
-        self.qualityValueFrame = Frame(self.optionsLabelFrame, height=20, width=200)
-        self.qualityValueFrame.pack(padx=5, pady=5)
-        self.qualityValueFrame.pack_propagate(0)
-        self.qualityValueLabel = Label(self.qualityValueFrame, text=_("Quality") + ":")
-        self.qualityValueLabel.pack(anchor=W, side=LEFT)
-        self.qualityValueSpinbox = Spinbox(self.qualityValueFrame, textvariable=self.qualityValue, from_=1, to=100, state=DISABLED)
-        self.qualityValueSpinbox.pack(anchor=W, side=LEFT)
+        self.NValueLabel = Label(self.optionsLabelFrame)
+        self.NValueLabel.pack()
+        self.NValueScale = Scale(self.optionsLabelFrame, variable=self.NValue, from_=1, to=200, state=DISABLED, orient=HORIZONTAL, showvalue=False)
+        self.NValueScale.pack(fill=X, padx=10, pady=10)
+        self.NValueScale.bind("<ButtonRelease-1>", self.NValueChanged)
+        self.NValueChanged()  # update scale label
+        self.qualityValueLabel = Label(self.optionsLabelFrame)
+        self.qualityValueLabel.pack()
+        self.qualityValueScale = Scale(self.optionsLabelFrame, variable=self.qualityValue, from_=1, to=100, state=DISABLED, orient=HORIZONTAL, showvalue=False)
+        self.qualityValueScale.pack(fill=X, padx=10, pady=10)
+        self.qualityValueScale.bind("<ButtonRelease-1>", self.qualityValueChanged)
+        self.qualityValueChanged()  # update scale label
         self.compressImageButton = Button(self.optionsLabelFrame, text=_("Compress image"), command=lambda: self.compressImage(), state=DISABLED)
         self.compressImageButton.pack()
 
@@ -132,8 +123,8 @@ class GUIManager:
                                                         _("Compress image") + 
                                                         "\"" + 
                                                         _(" button in options frame."))
-                self.qualityValueSpinbox.config(state=NORMAL)
-                self.NValueSpinbox.config(state=NORMAL)
+                self.qualityValueScale.config(state=NORMAL)
+                self.NValueScale.config(state=NORMAL)
                 self.compressImageButton.config(state=NORMAL)
                 self.originalImageScaleLabel = Label(self.originalImageLabelFrame)
                 self.originalImageScaleLabel.pack()
