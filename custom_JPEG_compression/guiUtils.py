@@ -20,9 +20,9 @@ class GUIManager:
         self.NValue = IntVar()
         self.NValue.trace("w", callback=self.NValueChanged)
         self.originalImageZoom = IntVar()
-        self.originalImageZoom.set(1)
-        self.copressedImageZoom = IntVar()
-        self.copressedImageZoom.set(1)
+        self.originalImageZoom.set(0)
+        self.compressedImageZoom = IntVar()
+        self.compressedImageZoom.set(0)
 
     def qualityValueChanged(self, *args):
         try :
@@ -135,19 +135,25 @@ class GUIManager:
                 self.qualityValueSpinbox.config(state=NORMAL)
                 self.NValueSpinbox.config(state=NORMAL)
                 self.compressImageButton.config(state=NORMAL)
-                self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=1, to=10, orient=HORIZONTAL)
+                self.originalImageScaleLabel = Label(self.originalImageLabelFrame)
+                self.originalImageScaleLabel.pack()
+                self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=-5, to=5, orient=HORIZONTAL, showvalue=False)
                 self.originalImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(True))
                 self.originalImageScale.pack()
-            self.originalImageZoom.set(1)
+            self.originalImageZoom.set(0)
+            self.originalImageScaleLabel.config(text=_("Original size"))
             self.NValue.set(1)
         else:
             if self.compressedImageCanvas is None:
                 self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
                 self.compressedImageLabel.pack_forget()
-                self.compressedImageScale = Scale(self.compressedImageLabelFrame, variable=self.copressedImageZoom, from_=1, to=10, orient=HORIZONTAL)
+                self.compressedImageScaleLabel = Label(self.compressedImageLabelFrame)
+                self.compressedImageScaleLabel.pack()
+                self.compressedImageScale = Scale(self.compressedImageLabelFrame, variable=self.compressedImageZoom, from_=-5, to=5, orient=HORIZONTAL, showvalue=False)
                 self.compressedImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(False))
                 self.compressedImageScale.pack()
-            self.copressedImageZoom.set(1)            
+            self.compressedImageZoom.set(0)
+            self.compressedImageScaleLabel.config(text=_("Original size"))
         self.drawImage(original=original, zoom=False)
 
     def drawImage(self, original=True, zoom=False,):
@@ -156,6 +162,8 @@ class GUIManager:
             imageHBar = self.originalImageHBar
             imageVBar = self.originalImageVBar
             if zoom is False:
+                self.originalImageZoom.set(0)
+                self.updateZoomLabel(original)
                 image = self.compressionCore.squareImage
             else:
                 image = self.compressionCore.imageZoom(self.originalImageZoom.get(), original=True)
@@ -166,7 +174,7 @@ class GUIManager:
             if zoom is False:
                 image = self.compressionCore.compressedImage
             else:
-                image = self.compressionCore.imageZoom(self.copressedImageZoom.get(), original=False)
+                image = self.compressionCore.imageZoom(self.compressedImageZoom.get(), original=False)
         image = ImageTk.PhotoImage(image)  
         canvas.delete("all") 
         imageHBar.pack(side=BOTTOM, fill=X)
@@ -184,10 +192,25 @@ class GUIManager:
         canvas.pack(expand=1, fill=BOTH)
 
     def updateImageZoom(self, original):
+        self.updateZoomLabel(original)
         if original is True:
             self.drawImage(original=True, zoom=True)
         else:
             self.drawImage(original=False, zoom=True)
+
+    def updateZoomLabel(self, original):
+            if original is True:
+                label = self.originalImageScaleLabel
+                zoomValue = self.originalImageZoom.get()
+            else:
+                label = self.compressedImageScaleLabel
+                zoomValue = self.compressedImageZoom.get()
+            if zoomValue == 0:
+                label.config(text=_("Original size"))
+            elif zoomValue > 0:
+                label.config(text=_("Zoom in x{}".format(zoomValue + 1)))
+            else:
+                label.config(text=_("Zoom out x{}".format(abs(zoomValue) + 1)))
 
     def compressImage(self):
         self.compressionCore.compressImage(self.qualityValue.get())

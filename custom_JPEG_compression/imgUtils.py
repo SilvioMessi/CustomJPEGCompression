@@ -104,15 +104,18 @@ class CompressionCore:
         self.squareImage = Image.new("L", (self.squareImageWidth, self.squareImageHeight))
         self.squareImage.putdata(self.squareImagePixels.flatten())
 
-    def imageZoom(self, zoom=1, original=True):
-        if zoom < 1 or zoom > 10:
-            zoom = 1
+    def imageZoom(self, zoom=0, original=True):
+        if zoom < -5 or zoom > 5:
+            zoom = 0
         if original is True:
             image = self.squareImage
         else:
             image = self.compressedImage
         iw, ih = image.size
-        size = int(iw * zoom) , int(ih * zoom)
+        if zoom >= 0:
+            size = int(iw * (zoom + 1)) , int(ih * (zoom + 1))
+        else:
+            size = int(iw / (abs(zoom) + 1)) , int(ih / (abs(zoom) + 1))
         return image.resize(size)
 
     def DCT2(self, pixelsMatrix, inverse=False):
