@@ -1,7 +1,7 @@
 from tkinter import * 
 from tkinter import messagebox
 from PIL import ImageTk
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 
 from custom_JPEG_compression.imgUtils import CompressionCore
 
@@ -60,8 +60,8 @@ class GUIManager:
         self.optionsFrame.pack(expand=1, fill=BOTH, padx=5, pady=5, side=LEFT)
         self.optionsLabelFrame = LabelFrame(self.optionsFrame, text=_("Options"))
         self.optionsLabelFrame.pack(expand=1, fill=BOTH, padx=5, pady=5)
-        self.openFileButton = Button(self.optionsLabelFrame, text=_("Load image"), command=lambda: self.fileDialog())
-        self.openFileButton.pack()
+        self.openImageButton = Button(self.optionsLabelFrame, text=_("Load image"), command=lambda: self.fileDialog())
+        self.openImageButton.pack()
         self.NValueLabel = Label(self.optionsLabelFrame)
         self.NValueLabel.pack()
         self.NValueScale = Scale(self.optionsLabelFrame, variable=self.NValue, from_=1, to=200, state=DISABLED, orient=HORIZONTAL, showvalue=False)
@@ -76,6 +76,7 @@ class GUIManager:
         self.qualityValueChanged()  # update scale label
         self.compressImageButton = Button(self.optionsLabelFrame, text=_("Compress image"), command=lambda: self.compressImage(), state=DISABLED)
         self.compressImageButton.pack()
+        self.saveImageButton = Button(self.optionsLabelFrame, text=_("Save compressed image"), command=lambda: self.fileDialog(mode='w', fileOptions={'defaultextension' : 'bmp'}, openMode=False))
 
         # compressed image frame
         self.compressedImageFrame = Frame(self.frame)
@@ -91,16 +92,18 @@ class GUIManager:
         self.compressedImageCanvas = None
 
     def fileDialog(self, fileOptions=None, mode='r', openMode=True):
-        if fileOptions is None:
-            fileOptions = {}
-            fileOptions['defaultextension'] = ''
-            fileOptions['filetypes'] = []
-            fileOptions['initialdir'] = ''
-            fileOptions['initialfile'] = ''
-            fileOptions['parent'] = self.root
-            fileOptions['title'] = ''
+        defaultFileOptions = {}
+        defaultFileOptions['defaultextension'] = ''
+        defaultFileOptions['filetypes'] = []
+        defaultFileOptions['initialdir'] = ''
+        defaultFileOptions['initialfile'] = ''
+        defaultFileOptions['parent'] = self.root
+        defaultFileOptions['title'] = ''
+        if fileOptions is not None:
+            for key in fileOptions:
+                defaultFileOptions[key] = fileOptions[key]
         if openMode is True:
-            file = askopenfilename(**fileOptions)
+            file = askopenfilename(**defaultFileOptions)
             if file is not None and file is not '':
                 try :
                     self.compressionCore.openImage(file)
@@ -111,6 +114,15 @@ class GUIManager:
                             "It's impossible open the image.")
                     return 
                 self.updateGUI(original=True)
+        else:
+            file = asksaveasfilename(**defaultFileOptions)
+            if file is not None:
+                try:
+                    self.compressionCore.compressedImage.save(fp= file, format="bmp")
+                except Exception:
+                    messagebox.showwarning(
+                        _("Error"),
+                        "Fail to save compressed image. Please try again.")
    
     def updateGUI(self, original=True):
         if original is True:
@@ -206,3 +218,4 @@ class GUIManager:
     def compressImage(self):
         self.compressionCore.compressImage(self.qualityValue.get())
         self.updateGUI(original=False)
+        self.saveImageButton.pack()
