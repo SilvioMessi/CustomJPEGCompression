@@ -76,6 +76,8 @@ class GUIManager:
         self.qualityValueChanged()  # update scale label
         self.compressImageButton = Button(self.optionsLabelFrame, text=_("Compress image"), command=lambda: self.compressImage(), state=DISABLED)
         self.compressImageButton.pack()
+        self.infoMessage = Message(self.optionsLabelFrame, width=400, anchor=CENTER)
+        self.infoMessage.pack(fill=X, padx=10, pady=10)
         self.saveImageButton = Button(self.optionsLabelFrame, text=_("Save compressed image"), command=lambda: self.fileDialog(mode='w', fileOptions={'defaultextension' : 'bmp'}, openMode=False))
 
         # compressed image frame
@@ -118,7 +120,7 @@ class GUIManager:
             file = asksaveasfilename(**defaultFileOptions)
             if file is not None:
                 try:
-                    self.compressionCore.compressedImage.save(fp= file, format="bmp")
+                    self.compressionCore.compressedImage.save(fp=file, format="bmp")
                 except Exception:
                     messagebox.showwarning(
                         _("Error"),
@@ -159,7 +161,8 @@ class GUIManager:
             self.compressedImageScaleLabel.config(text=_("Original size"))
         self.drawImage(original=original, zoom=False)
 
-    def drawImage(self, original=True, zoom=False,):
+    def drawImage(self, original=True, zoom=False):
+        self.updateInfoMessage()
         if original is True:
             canvas = self.originalImageCanvas
             imageHBar = self.originalImageHBar
@@ -214,6 +217,19 @@ class GUIManager:
                 label.config(text=_("Zoom in x{}".format(zoomValue + 1)))
             else:
                 label.config(text=_("Zoom out x{}".format(abs(zoomValue) + 1)))
+
+    def updateInfoMessage(self):
+        text = ''
+        originalImage = self.compressionCore.originalImage
+        squaredImage = self.compressionCore.squareImage
+        compressedImage = self.compressionCore.compressedImage
+        if originalImage is not None:
+            text = text + _("Original image size: {}x{} \n").format(*originalImage.size)
+        if squaredImage is not None:
+            text = text + _("Completed image size: {}x{} \n").format(*squaredImage.size)
+        if compressedImage is not None:
+            text = text + _("Compressed image size: {}x{} \n").format(*compressedImage.size)
+        self.infoMessage.config(text=text)
 
     def compressImage(self):
         self.compressionCore.compressImage(self.qualityValue.get())
