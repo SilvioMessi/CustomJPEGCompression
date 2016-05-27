@@ -62,22 +62,23 @@ class GUIManager:
         self.optionsLabelFrame.pack(expand=1, fill=BOTH, padx=5, pady=5)
         self.openImageButton = Button(self.optionsLabelFrame, text=_("Load image"), command=lambda: self.fileDialog())
         self.openImageButton.pack()
-        self.NValueLabel = Label(self.optionsLabelFrame)
+        self.imagesSizeFrame = LabelFrame(self.optionsLabelFrame, text=_("Images size"))
+        self.infoMessage = Message(self.imagesSizeFrame, width=400, anchor=W)
+        self.infoMessage.pack(fill=X)
+        self.NAndQualityFrame = LabelFrame(self.optionsLabelFrame, text=_("Compression parameters"))
+        self.NValueLabel = Label(self.NAndQualityFrame)
         self.NValueLabel.pack()
-        self.NValueScale = Scale(self.optionsLabelFrame, variable=self.NValue, from_=1, to=200, state=DISABLED, orient=HORIZONTAL, showvalue=False)
+        self.NValueScale = Scale(self.NAndQualityFrame, variable=self.NValue, from_=1, to=200, orient=HORIZONTAL, showvalue=False)
         self.NValueScale.pack(fill=X, padx=10, pady=10)
         self.NValueScale.bind("<ButtonRelease-1>", self.NValueChanged)
         self.NValueChanged()  # update scale label
-        self.qualityValueLabel = Label(self.optionsLabelFrame)
+        self.qualityValueLabel = Label(self.NAndQualityFrame)
         self.qualityValueLabel.pack()
-        self.qualityValueScale = Scale(self.optionsLabelFrame, variable=self.qualityValue, from_=1, to=100, state=DISABLED, orient=HORIZONTAL, showvalue=False)
+        self.qualityValueScale = Scale(self.NAndQualityFrame, variable=self.qualityValue, from_=1, to=100, orient=HORIZONTAL, showvalue=False)
         self.qualityValueScale.pack(fill=X, padx=10, pady=10)
         self.qualityValueScale.bind("<ButtonRelease-1>", self.qualityValueChanged)
         self.qualityValueChanged()  # update scale label
-        self.compressImageButton = Button(self.optionsLabelFrame, text=_("Compress image"), command=lambda: self.compressImage(), state=DISABLED)
-        self.compressImageButton.pack()
-        self.infoMessage = Message(self.optionsLabelFrame, width=400, anchor=CENTER)
-        self.infoMessage.pack(fill=X, padx=10, pady=10)
+        self.compressImageButton = Button(self.optionsLabelFrame, text=_("Compress image"), command=lambda: self.compressImage())
         self.saveImageButton = Button(self.optionsLabelFrame, text=_("Save compressed image"), command=lambda: self.fileDialog(mode='w', fileOptions={'defaultextension' : 'bmp'}, openMode=False))
 
         # compressed image frame
@@ -118,7 +119,7 @@ class GUIManager:
                 self.updateGUI(original=True)
         else:
             file = asksaveasfilename(**defaultFileOptions)
-            if file is not None:
+            if file is not None and file is not '':
                 try:
                     self.compressionCore.compressedImage.save(fp=file, format="bmp")
                 except Exception:
@@ -137,17 +138,14 @@ class GUIManager:
                                                         _("Compress image") + 
                                                         "\"" + 
                                                         _(" button in options frame."))
-                self.qualityValueScale.config(state=NORMAL)
-                self.NValueScale.config(state=NORMAL)
-                self.compressImageButton.config(state=NORMAL)
                 self.originalImageScaleLabel = Label(self.originalImageLabelFrame)
                 self.originalImageScaleLabel.pack()
                 self.originalImageScale = Scale(self.originalImageLabelFrame, variable=self.originalImageZoom, from_=-5, to=5, orient=HORIZONTAL, showvalue=False)
                 self.originalImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(True))
                 self.originalImageScale.pack()
-            self.originalImageZoom.set(0)
-            self.originalImageScaleLabel.config(text=_("Original size"))
-            self.NValue.set(1)
+                self.imagesSizeFrame.pack(fill=BOTH, padx=10, pady=10)
+                self.NAndQualityFrame.pack(fill=BOTH, padx=10, pady=10)
+                self.compressImageButton.pack()
         else:
             if self.compressedImageCanvas is None:
                 self.compressedImageCanvas = Canvas(self.compressedImageContainerFrame)
@@ -157,8 +155,7 @@ class GUIManager:
                 self.compressedImageScale = Scale(self.compressedImageLabelFrame, variable=self.compressedImageZoom, from_=-5, to=5, orient=HORIZONTAL, showvalue=False)
                 self.compressedImageScale.bind("<ButtonRelease-1>", lambda x:self.updateImageZoom(False))
                 self.compressedImageScale.pack()
-            self.compressedImageZoom.set(0)
-            self.compressedImageScaleLabel.config(text=_("Original size"))
+                self.saveImageButton.pack()
         self.drawImage(original=original, zoom=False)
 
     def drawImage(self, original=True, zoom=False):
@@ -178,6 +175,8 @@ class GUIManager:
             imageHBar = self.compressedImageHBar
             imageVBar = self.compressedImageVBar
             if zoom is False:
+                self.compressedImageZoom.set(0)
+                self.updateZoomLabel(original)
                 image = self.compressionCore.compressedImage
             else:
                 image = self.compressionCore.imageZoom(self.compressedImageZoom.get(), original=False)
@@ -205,18 +204,18 @@ class GUIManager:
             self.drawImage(original=False, zoom=True)
 
     def updateZoomLabel(self, original):
-            if original is True:
-                label = self.originalImageScaleLabel
-                zoomValue = self.originalImageZoom.get()
-            else:
-                label = self.compressedImageScaleLabel
-                zoomValue = self.compressedImageZoom.get()
-            if zoomValue == 0:
-                label.config(text=_("Original size"))
-            elif zoomValue > 0:
-                label.config(text=_("Zoom in x{}".format(zoomValue + 1)))
-            else:
-                label.config(text=_("Zoom out x{}".format(abs(zoomValue) + 1)))
+        if original is True:
+            label = self.originalImageScaleLabel
+            zoomValue = self.originalImageZoom.get()
+        else:
+            label = self.compressedImageScaleLabel
+            zoomValue = self.compressedImageZoom.get()
+        if zoomValue == 0:
+            label.config(text=_("Original size"))
+        elif zoomValue > 0:
+            label.config(text=_("Zoom in x{}".format(zoomValue + 1)))
+        else:
+            label.config(text=_("Zoom out x{}".format(abs(zoomValue) + 1)))
 
     def updateInfoMessage(self):
         text = ''
@@ -234,4 +233,3 @@ class GUIManager:
     def compressImage(self):
         self.compressionCore.compressImage(self.qualityValue.get())
         self.updateGUI(original=False)
-        self.saveImageButton.pack()
