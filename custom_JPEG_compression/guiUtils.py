@@ -3,7 +3,7 @@ from tkinter import messagebox
 from PIL import ImageTk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 
-from custom_JPEG_compression.imgUtils import CompressionCore
+from imgUtils import CompressionCore
 
 _ = lambda s: s
 

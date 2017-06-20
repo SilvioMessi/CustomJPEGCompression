@@ -1,6 +1,6 @@
 from tkinter import Tk
 
-from custom_JPEG_compression.guiUtils import GUIManager
+from guiUtils import GUIManager
 
 _ = lambda s: s
 
